@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "index.js",
   "scripts": {
     "dev": "ts-node src/index.ts",
@@ -17,6 +17,9 @@
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "resend": "^6.9.4",
+    "ssh2": "^1.17.0",
+    "web-push": "^3.6.7",
     "ws": "^8.20.0"
   },
   "devDependencies": {
@@ -24,6 +27,8 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.5.0",
+    "@types/ssh2": "^1.15.5",
+    "@types/web-push": "^3.6.4",
     "@types/ws": "^8.18.1",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.2"

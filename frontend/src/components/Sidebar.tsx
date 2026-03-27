@@ -57,6 +57,10 @@ export function Sidebar({ data, events = [] }: Props) {
               </span>
             )}
           </NavLink>
+          <NavLink to="/settings" className={navLinkClass}>
+            <span className="material-symbols-outlined mr-3" data-icon="settings">settings</span>
+            <span className="font-medium text-sm">Configuración</span>
+          </NavLink>
         </nav>
         <div className="px-6 mt-auto mb-4">
           <div className="p-3 rounded bg-surface-container-lowest border border-outline-variant/10 text-center">
@@ -89,6 +93,9 @@ export function Sidebar({ data, events = [] }: Props) {
               </span>
             )}
           </div>
+        </NavLink>
+        <NavLink to="/settings" className={mobileNavLinkClass}>
+          <span className="material-symbols-outlined" data-icon="settings">settings</span>
         </NavLink>
       </nav>
     </>

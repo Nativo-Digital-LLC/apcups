@@ -10,9 +10,15 @@ import {
   saveHistory, getAllHistory,
   saveEvent, getEvents, getLastEventOfType,
   pruneOld,
+  getAllSettings, setSetting,
+  getPushSubscriptions, addPushSubscription, removePushSubscription,
+  getNodes, upsertNode, deleteNode,
   type HistoryEntry, type UPSEvent, type EventSeverity,
 } from './db';
 import { ApcUpsStatusProps } from './types';
+import { notify, vapidPublicKey, sendTestAlert, ALERT_TYPES } from './notifications';
+import { onStatus as automationOnStatus } from './automation';
+import { testConnection } from './ssh';
 
 const app = express();
 app.use(cors());
@@ -49,6 +55,8 @@ function addEvent(type: string, severity: EventSeverity, description: string, va
   const event = saveEvent(partial);
   console.log(`[EVENT][${severity.toUpperCase()}] ${type}: ${description}`);
   broadcastJson({ type: 'event', data: event });
+  // Send notification (non-blocking)
+  notify(event).catch(() => {});
   return event;
 }
 
@@ -152,6 +160,7 @@ async function pollUPS() {
     latestStatus = status;
     detectEvents(status);
     takeHistorySnapshot(status);
+    automationOnStatus(status);
     broadcastJson({ type: 'status', data: status });
   } catch (err) {
     console.error('Error polling UPS:', err);
@@ -185,7 +194,7 @@ wss.on('connection', (ws) => {
   ws.on('close', () => console.log('Client disconnected'));
 });
 
-// ── REST Endpoints ────────────────────────────────────────────────────────────
+// ── Core REST Endpoints ───────────────────────────────────────────────────────
 
 app.get('/api/status', (_req, res) => {
   if (!latestStatus) {
@@ -204,6 +213,81 @@ app.get('/api/history', (req, res) => {
 app.get('/api/events', (req, res) => {
   const limit = parseInt((req.query.limit as string) || '200', 10);
   res.json(getEvents(Math.min(limit, 500)));
+});
+
+// ── Settings endpoints ────────────────────────────────────────────────────────
+
+app.get('/api/settings', (_req, res) => {
+  res.json(getAllSettings());
+});
+
+app.post('/api/settings', (req, res) => {
+  const updates: Record<string, string> = req.body;
+  for (const [key, value] of Object.entries(updates)) {
+    setSetting(key, String(value));
+  }
+  res.json({ ok: true });
+});
+
+// ── Nodes endpoints ───────────────────────────────────────────────────────────
+
+app.get('/api/nodes', (_req, res) => {
+  // Never expose credentials to the client
+  const nodes = getNodes().map(n => ({ ...n, private_key: n.private_key ? '••••' : undefined, password: n.password ? '••••' : undefined }));
+  res.json(nodes);
+});
+
+app.post('/api/nodes', (req, res) => {
+  try {
+    const node = upsertNode(req.body);
+    res.json(node);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/nodes/:id', (req, res) => {
+  deleteNode(Number(req.params.id));
+  res.json({ ok: true });
+});
+
+app.post('/api/nodes/:id/test-ssh', async (req, res) => {
+  const nodes = getNodes();
+  const node = nodes.find(n => n.id === Number(req.params.id));
+  if (!node) { res.status(404).json({ error: 'Nodo no encontrado' }); return; }
+  const result = await testConnection(node);
+  res.json(result);
+});
+
+// ── Push endpoints ─────────────────────────────────────────────────────────────
+
+app.get('/api/push/vapid-public-key', (_req, res) => {
+  res.json({ publicKey: vapidPublicKey });
+});
+
+app.post('/api/push/subscribe', (req, res) => {
+  const { endpoint, keys } = req.body;
+  if (!endpoint || !keys?.p256dh || !keys?.auth) {
+    res.status(400).json({ error: 'Invalid subscription' }); return;
+  }
+  addPushSubscription({ endpoint, p256dh: keys.p256dh, auth: keys.auth, created_at: Date.now() });
+  res.json({ ok: true });
+});
+
+app.delete('/api/push/unsubscribe', (req, res) => {
+  removePushSubscription(req.body.endpoint);
+  res.json({ ok: true });
+});
+
+// ── Alert types (for UI) & test ───────────────────────────────────────────────
+
+app.get('/api/alerts/types', (_req, res) => {
+  res.json(ALERT_TYPES);
+});
+
+app.post('/api/alerts/test', async (_req, res) => {
+  const results = await sendTestAlert();
+  res.json({ results });
 });
 
 // ── Server ────────────────────────────────────────────────────────────────────

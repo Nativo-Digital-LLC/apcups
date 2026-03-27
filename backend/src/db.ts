@@ -34,6 +34,33 @@ db.exec(`
     value       TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint   TEXT    NOT NULL UNIQUE,
+    p256dh     TEXT    NOT NULL,
+    auth       TEXT    NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS nodes (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    name         TEXT    NOT NULL,
+    host         TEXT    NOT NULL,
+    port         INTEGER NOT NULL DEFAULT 22,
+    user         TEXT    NOT NULL,
+    private_key  TEXT,
+    password     TEXT,
+    shutdown_cmd TEXT    NOT NULL DEFAULT 'sudo shutdown -h now',
+    ups_cmd      TEXT,
+    node_order   INTEGER NOT NULL DEFAULT 1,
+    enabled      INTEGER NOT NULL DEFAULT 1
+  );
+
   CREATE INDEX IF NOT EXISTS idx_history_timestamp ON history(timestamp);
   CREATE INDEX IF NOT EXISTS idx_events_timestamp  ON events(timestamp);
 `);
@@ -126,5 +153,95 @@ export function pruneOld(): void {
 }
 
 console.log(`[SQLite] Database opened at ${DB_PATH}`);
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+
+export function getSetting(key: string, defaultValue = ''): string {
+  const row = db.prepare<[string], { value: string }>('SELECT value FROM settings WHERE key = ?').get(key);
+  return row?.value ?? defaultValue;
+}
+
+export function setSetting(key: string, value: string): void {
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
+}
+
+export function getAllSettings(): Record<string, string> {
+  const rows = db.prepare<[], { key: string; value: string }>('SELECT key, value FROM settings').all();
+  return Object.fromEntries(rows.map(r => [r.key, r.value]));
+}
+
+// ── Push Subscriptions ────────────────────────────────────────────────────────
+
+export interface PushSubscription {
+  id?: number;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  created_at: number;
+}
+
+export function getPushSubscriptions(): PushSubscription[] {
+  return db.prepare<[], PushSubscription>('SELECT * FROM push_subscriptions').all();
+}
+
+export function addPushSubscription(sub: Omit<PushSubscription, 'id'>): void {
+  db.prepare(
+    'INSERT INTO push_subscriptions (endpoint, p256dh, auth, created_at) VALUES (@endpoint, @p256dh, @auth, @created_at) ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth'
+  ).run(sub);
+}
+
+export function removePushSubscription(endpoint: string): void {
+  db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(endpoint);
+}
+
+// ── Nodes ─────────────────────────────────────────────────────────────────────
+
+export interface SwarmNode {
+  id?: number;
+  name: string;
+  host: string;
+  port: number;
+  user: string;
+  private_key?: string | null;
+  password?: string | null;
+  shutdown_cmd: string;
+  ups_cmd?: string | null;
+  node_order: number;
+  enabled: number;
+}
+
+export function getNodes(): SwarmNode[] {
+  return db.prepare<[], SwarmNode>('SELECT * FROM nodes ORDER BY node_order ASC').all();
+}
+
+export function upsertNode(node: SwarmNode): SwarmNode {
+  // better-sqlite3 requires null (not undefined) for nullable columns
+  const safe = {
+    ...node,
+    private_key: node.private_key ?? null,
+    password:    node.password    ?? null,
+    ups_cmd:     node.ups_cmd     ?? null,
+  };
+
+  if (safe.id) {
+    db.prepare(`
+      UPDATE nodes SET name=@name, host=@host, port=@port, user=@user,
+        private_key=@private_key, password=@password, shutdown_cmd=@shutdown_cmd,
+        ups_cmd=@ups_cmd, node_order=@node_order, enabled=@enabled
+      WHERE id=@id
+    `).run(safe);
+    return safe;
+  } else {
+    const info = db.prepare(`
+      INSERT INTO nodes (name, host, port, user, private_key, password, shutdown_cmd, ups_cmd, node_order, enabled)
+      VALUES (@name, @host, @port, @user, @private_key, @password, @shutdown_cmd, @ups_cmd, @node_order, @enabled)
+    `).run(safe);
+    return { ...safe, id: Number(info.lastInsertRowid) };
+  }
+}
+
+export function deleteNode(id: number): void {
+  db.prepare('DELETE FROM nodes WHERE id = ?').run(id);
+}
 
 export default db;
