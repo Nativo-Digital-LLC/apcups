@@ -1,7 +1,6 @@
 import { ConfigProvider, notification } from 'antd';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
-import { TopAppBar } from './components/TopAppBar';
 import { Dashboard } from './pages/Dashboard';
 import { BatteryStatus } from './pages/BatteryStatus';
 import { PowerStatistics } from './pages/PowerStatistics';
@@ -42,7 +41,6 @@ function MainLayout() {
       <Sidebar data={data} events={events} />
       
       <main className="flex-1 md:ml-64 flex flex-col min-h-screen relative bg-industrial-gradient pb-20 md:pb-0">
-        <TopAppBar />
         
         <div className="p-6 lg:p-10 space-y-10 max-w-7xl mx-auto w-full flex-1">
           <Routes>

@@ -1,5 +1,5 @@
 {
-  "name": "backend",
+  "name": "mira-backend",
   "version": "1.2.0",
   "main": "index.js",
   "scripts": {

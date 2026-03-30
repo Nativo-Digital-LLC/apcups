@@ -103,14 +103,14 @@ authRouter.post('/forgot-password', async (req, res) => {
   const html = `
     <div style="font-family: sans-serif; padding: 20px;">
       <h2>Restablecimiento de Contraseña</h2>
-      <p>Has solicitado restablecer tu contraseña en <strong>APC UPS Monitor</strong>.</p>
+      <p>Has solicitado restablecer tu contraseña en <strong>Mira</strong>.</p>
       <p>Haz clic en el siguiente enlace para continuar. Este enlace expira en 1 hora.</p>
       <a href="${resetLink}" style="display:inline-block; padding: 10px 15px; background: #77dd6d; color: #121416; text-decoration: none; font-weight: bold; border-radius: 5px;">Restablecer Contraseña</a>
       <p style="color:#888; font-size:12px; margin-top:20px;">Si no solicitaste esto, ignora este correo.</p>
     </div>
   `;
 
-  const sent = await sendEmail('Restablecimiento de Contraseña - APC UPS', html, user.email);
+  const sent = await sendEmail('Restablecimiento de Contraseña - Mira', html, user.email);
   if (!sent) {
     console.error('[Auth] Could not send reset email. Ensure Resend or SMTP is configured.');
     // Keep it silent to the frontend mostly, or maybe let them know?

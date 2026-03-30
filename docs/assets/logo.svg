@@ -1,0 +1,10 @@
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="60" />
+  <circle cx="30" cy="30" r="19" stroke="#00FF00" stroke-opacity="0.2" stroke-width="2" />
+  <circle cx="30" cy="30" r="16" fill="#151619" stroke="#00FF00" stroke-width="1" />
+  <g transform="translate(18, 18)">
+    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="#00FF00" fill-opacity="0.2" stroke="#00FF00" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+  <text x="60" y="32" fill="white" font-family="Arial, sans-serif" font-size="24" font-weight="bold" font-style="italic">MIRA</text>
+  <text x="60" y="48" fill="#00FF00" fill-opacity="0.7" font-family="monospace" font-size="10" letter-spacing="2">UPS MONITOR</text>
+</svg>

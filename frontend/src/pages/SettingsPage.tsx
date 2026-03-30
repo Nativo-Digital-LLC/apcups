@@ -307,7 +307,7 @@ export function SettingsPage() {
                       <Input.Password placeholder="re_xxxxxxxxxxxx" />
                     </Form.Item>
                     <Form.Item name="resend_from" label="Remitente (From)">
-                      <Input placeholder="APC UPS <noreply@tudominio.com>" />
+                      <Input placeholder="Mira <noreply@tudominio.com>" />
                     </Form.Item>
                     <Form.Item name="resend_to" label="Destinatarios (separa con comas)" className="md:col-span-2">
                       <Input placeholder="admin@empresa.com, ops@empresa.com" />

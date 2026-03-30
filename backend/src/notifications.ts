@@ -86,7 +86,7 @@ export async function sendEmail(subject: string, html: string, customTo?: string
   const apiKey = getSetting('resend_api_key');
   if (!apiKey) return;
 
-  const from  = getSetting('resend_from', 'APC UPS <noreply@example.com>');
+  const from  = getSetting('resend_from', 'Mira <noreply@example.com>');
   let to: string[] = [];
   if (customTo) {
     to = Array.isArray(customTo) ? customTo : [customTo];
@@ -162,12 +162,12 @@ export async function notify(event: UPSEvent) {
       ${event.value ? `<p><strong>Valor:</strong> ${event.value}</p>` : ''}
       <p><strong>Hora:</strong> ${new Date(event.timestamp).toLocaleString('es-DO')}</p>
       <hr/>
-      <p style="color:#888; font-size:12px;">APC UPS Monitor — Sistema automatizado</p>
+      <p style="color:#888; font-size:12px;">Mira Monitor — Sistema automatizado</p>
     </div>
   `;
 
   if (emailEnabled) sendEmail(subject, html);
-  if (pushEnabled)  sendPush(`${emoji} APC UPS`, event.description, emoji);
+  if (pushEnabled)  sendPush(`${emoji} Mira`, event.description, emoji);
 }
 
 // ── Test alert ────────────────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ export async function sendTestAlert() {
 
   if (apiKey) {
     try {
-      await sendEmail('🧪 Alerta de Prueba — APC UPS Monitor', `
+      await sendEmail('🧪 Alerta de Prueba — Mira Monitor', `
         <div style="font-family: sans-serif; padding: 20px;">
           <h2>🧪 Alerta de prueba</h2>
           <p>Si recibes este correo, la integración con Resend está funcionando.</p>
@@ -204,7 +204,7 @@ export async function sendTestAlert() {
 
   if (subs.length > 0) {
     try {
-      await sendPush('🧪 Prueba APC UPS', 'Las notificaciones push están funcionando', '🧪');
+      await sendPush('🧪 Prueba Mira', 'Las notificaciones push están funcionando', '🧪');
       results.push(`Push enviado a ${subs.length} dispositivo(s)`);
     } catch { results.push('Push falló'); }
   } else {

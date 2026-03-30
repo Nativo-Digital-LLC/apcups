@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "[entrypoint] Starting APC UPS Monitor..."
+echo "[entrypoint] Starting Mira..."
 
 # ── Start Node backend ────────────────────────────────────────────────────────
 cd /app/backend

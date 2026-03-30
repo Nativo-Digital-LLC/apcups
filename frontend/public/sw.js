@@ -1,7 +1,7 @@
-// APC UPS Monitor — Service Worker for Push Notifications
+// Mira — Service Worker for Push Notifications
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || '⚡ APC UPS Monitor';
+  const title = data.title || '⚡ Mira';
   const options = {
     body: data.body || 'Notificación del sistema UPS',
     icon: '/favicon.ico',

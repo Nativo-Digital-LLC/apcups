@@ -1,4 +1,4 @@
-# APC UPS Dashboard & System Manager
+# Mira
 
 ![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -31,7 +31,7 @@ Un panel de control web moderno, en tiempo real y autoalojado para monitorear tu
 
 ## 🐳 Despliegue con Docker (Recomendado)
 
-La forma más sencilla de ponerlo en marcha es utilizando nuestra imagen preconstruida en Docker Hub: `lsantiagond/apcups`.
+La forma más sencilla de ponerlo en marcha es utilizando nuestra imagen preconstruida en Docker Hub: `lsantiagond/mira`.
 
 ### 1. Preparar archivo `docker-compose.yml`
 
@@ -41,9 +41,9 @@ Asegúrate de tener un demonio `apcupsd` corriendo en tu red, con `NIS` (Network
 version: '3.8'
 
 services:
-  apcups:
-    image: lsantiagond/apcups:latest
-    container_name: apcups_dashboard
+  mira:
+    image: lsantiagond/mira:latest
+    container_name: mira_dashboard
     ports:
       - "80:80"        # Puerto donde quieres exponer el panel web
     environment:
@@ -86,8 +86,8 @@ Si planeas modificar el código o contribuir a la herramienta requieres tener in
 
 1. Clonar el repositorio:
    ```bash
-   git clone https://github.com/lsantiagond/apcups.git
-   cd apcups
+   git clone https://github.com/lsantiagond/mira.git
+   cd mira
    ```
 2. Iniciar el Backend:
    ```bash

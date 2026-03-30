@@ -47,8 +47,9 @@ export function Login() {
     <div className="min-h-screen flex items-center justify-center bg-industrial-gradient text-on-background p-4">
       <div className="max-w-md w-full bg-surface p-8 rounded-2xl border border-white/5 shadow-2xl">
         <div className="text-center mb-8">
+          <img src="/logo.svg" alt="Mira" className="h-12 mx-auto mb-4" />
           <Title level={2} className="!text-on-surface !mb-2">Iniciar Sesión</Title>
-          <Text className="text-on-surface-variant">Accede al panel de control de APC UPS</Text>
+          <Text className="text-on-surface-variant">Accede al panel de control de Mira</Text>
         </div>
 
         <Form layout="vertical" onFinish={onFinish} size="large">

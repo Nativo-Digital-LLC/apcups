@@ -28,7 +28,7 @@ export function Sidebar({ data, events = [] }: Props) {
     <>
       <aside className="hidden md:flex flex-col h-screen w-64 left-0 border-r border-[#3f4a3b]/15 bg-[#1a1c1e] py-4 fixed z-50">
         <div className="px-6 mb-8">
-          <div className="text-lg font-black text-[#77dd6d] font-headline">System Manager</div>
+          <img src="/logo.svg" alt="Mira" className="h-8" />
           <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mt-1">
             {isOnline ? 'Online' : 'On Battery'} - {data?.LINEV || 'N/A'}
           </div>

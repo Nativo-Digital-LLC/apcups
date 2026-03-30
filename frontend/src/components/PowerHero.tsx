@@ -1,8 +1,8 @@
 import type { UPSData } from '../hooks/useUPSData';
 
-export function PowerHero({ data }: { data: UPSData | null; parsed: any }) {
+export function PowerHero({ data }: { data: UPSData | null; parsed: unknown }) {
   const linefreq = data?.LINEFREQ ? parseFloat(data.LINEFREQ).toFixed(1) : '60.0';
-  const model = data?.MODEL || 'APC Back-UPS XS';
+  const model = data?.MODEL || '';
   const uptime = data?.STARTTIME || 'Desconocida';
 
   return (

@@ -25,7 +25,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: lsantiagond/apcups
+          images: lsantiagond/mira
           tags: |
             # Siempre actualiza :latest
             type=raw,value=latest
@@ -43,15 +43,15 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=lsantiagond/apcups:buildcache
-          cache-to: type=registry,ref=lsantiagond/apcups:buildcache,mode=max
+          cache-from: type=registry,ref=lsantiagond/mira:buildcache
+          cache-to: type=registry,ref=lsantiagond/mira:buildcache,mode=max
 
       - name: Update Docker Hub Description
         uses: peter-evans/dockerhub-description@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: lsantiagond/apcups
+          repository: lsantiagond/mira
           readme-filepath: ./README.md
 
       # --- Despliegue Automático Opcional ---
