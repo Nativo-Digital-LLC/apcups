@@ -46,6 +46,14 @@ jobs:
           cache-from: type=registry,ref=lsantiagond/apcups:buildcache
           cache-to: type=registry,ref=lsantiagond/apcups:buildcache,mode=max
 
+      - name: Update Docker Hub Description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: lsantiagond/apcups
+          readme-filepath: ./README.md
+
       # --- Despliegue Automático Opcional ---
       # Descomenta el bloque inferior ("Trigger Deployment Webhook") si utilizas servicios PaaS
       # como Portainer, CapRover, Dokploy, etc., y cuentas con un Webhook remoto.

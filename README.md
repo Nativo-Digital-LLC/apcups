@@ -2,7 +2,6 @@
 
 ![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Docker Pulls](https://img.shields.io/docker/pulls/lsantiagond/apcups.svg)
 
 Un panel de control web moderno, en tiempo real y autoalojado para monitorear tu unidad UPS APC (vía `apcupsd`) y administrar el apagado automatizado de ordenadores o nodos en caso de cortes de energía prolongados.
 
