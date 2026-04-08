@@ -13,6 +13,7 @@ import {
   getAllSettings, setSetting,
   getPushSubscriptions, addPushSubscription, removePushSubscription,
   getNodes, upsertNode, deleteNode,
+  getAutomations, upsertAutomation, deleteAutomation,
   type HistoryEntry, type UPSEvent, type EventSeverity,
 } from './db';
 import { ApcUpsStatusProps } from './types';
@@ -271,6 +272,26 @@ app.post('/api/nodes/:id/test-ssh', async (req, res) => {
   if (!node) { res.status(404).json({ error: 'Nodo no encontrado' }); return; }
   const result = await testConnection(node);
   res.json(result);
+});
+
+// ── Automations endpoints ───────────────────────────────────────────────────────
+
+app.get('/api/automations', (_req, res) => {
+  res.json(getAutomations());
+});
+
+app.post('/api/automations', (req, res) => {
+  try {
+    const automation = upsertAutomation(req.body);
+    res.json(automation);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/automations/:id', (req, res) => {
+  deleteAutomation(Number(req.params.id));
+  res.json({ ok: true });
 });
 
 // ── Push endpoints ─────────────────────────────────────────────────────────────
