@@ -30,6 +30,16 @@ interface SwarmNode {
   enabled: number;
 }
 
+interface Automation {
+  id?: number;
+  enabled: number;
+  command: string;
+  trigger_type: 'time_since_outage' | 'battery_time_remaining' | 'battery_percentage';
+  trigger_value: number;
+  node_id?: number | null;
+  notify: number;
+}
+
 const ALERT_LABELS: Record<string, string> = {
   TRANSFER_TO_BATTERY: 'Corte eléctrico (a batería)',
   TRANSFER_TO_LINE: 'Restauración de energía',
@@ -100,27 +110,33 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 export function SettingsPage() {
   const [settings, setSettings] = useState<Settings>({});
   const [nodes, setNodes] = useState<SwarmNode[]>([]);
+  const [automations, setAutomations] = useState<Automation[]>([]);
   const [alertTypes, setAlertTypes] = useState<string[]>([]);
   const [pushStatus, setPushStatus] = useState<'unknown' | 'granted' | 'denied' | 'not-supported'>('unknown');
   const [vapidKey, setVapidKey] = useState('');
   const [nodeModalOpen, setNodeModalOpen] = useState(false);
+  const [automationModalOpen, setAutomationModalOpen] = useState(false);
   const [editingNode, setEditingNode] = useState<SwarmNode | null>(null);
+  const [editingAutomation, setEditingAutomation] = useState<Automation | null>(null);
   const [saving, setSaving] = useState(false);
   const [testingNode, setTestingNode] = useState<number | null>(null);
   const [nodeForm] = Form.useForm();
+  const [automationForm] = Form.useForm();
   const [emailForm] = Form.useForm();
   const [autoForm] = Form.useForm();
 
   const load = useCallback(async () => {
     try {
-      const [s, n, types, vapid] = await Promise.all([
+      const [s, n, a, types, vapid] = await Promise.all([
         apiGet('/api/settings'),
         apiGet('/api/nodes'),
+        apiGet('/api/automations'),
         apiGet('/api/alerts/types'),
         apiGet('/api/push/vapid-public-key'),
       ]);
       setSettings(s);
       setNodes(n);
+      setAutomations(a);
       setAlertTypes(types);
       setVapidKey(vapid.publicKey);
       emailForm.setFieldsValue({
@@ -130,12 +146,9 @@ export function SettingsPage() {
       });
       autoForm.setFieldsValue({
         automation_enabled: s.automation_enabled === '1',
-        node3_delay_minutes: parseInt(s.node3_delay_minutes || '5', 10),
-        node2_battery_pct: parseInt(s.node2_battery_pct || '60', 10),
-        node1_battery_pct: parseInt(s.node1_battery_pct || '20', 10),
-        ups_powerout_node_id: s.ups_powerout_node_id || '',
       });
     } catch (e: any) {
+
       message.error('Error cargando configuración: ' + e.message);
     }
     // Push status
@@ -240,13 +253,46 @@ export function SettingsPage() {
     finally { setTestingNode(null); }
   };
 
+  // ── Automation CRUD ─────────────────────────────────────────────────────────
+
+  const openAutomationModal = (automation?: Automation) => {
+    setEditingAutomation(automation || null);
+    automationForm.setFieldsValue(automation || {
+      enabled: 1,
+      trigger_type: 'time_since_outage',
+      trigger_value: 5,
+      command: 'sudo shutdown -h now',
+      notify: 1,
+    });
+    setAutomationModalOpen(true);
+  };
+
+  const handleAutomationSave = async () => {
+    const vals = await automationForm.validateFields();
+    const payload: Automation = {
+      ...(editingAutomation || {}),
+      ...vals,
+      enabled: vals.enabled ? 1 : 0,
+      notify: vals.notify ? 1 : 0,
+      node_id: vals.node_id || null,
+    };
+    try {
+      await apiPost('/api/automations', payload);
+      message.success('Automatización guardada');
+      setAutomationModalOpen(false);
+      load();
+    } catch (e: any) { message.error(e.message); }
+  };
+
+  const handleAutomationDelete = async (id: number) => {
+    await apiDelete(`/api/automations/${id}`);
+    message.success('Automatización eliminada');
+    load();
+  };
+
   const saveAutomation = async (vals: Record<string, unknown>) => {
     await saveSettings({
       automation_enabled: vals.automation_enabled ? '1' : '0',
-      node3_delay_minutes: String(vals.node3_delay_minutes),
-      node2_battery_pct: String(vals.node2_battery_pct),
-      node1_battery_pct: String(vals.node1_battery_pct),
-      ups_powerout_node_id: String(vals.ups_powerout_node_id || ''),
     });
   };
 
@@ -404,15 +450,7 @@ export function SettingsPage() {
           <TabPane tab={<span><PoweroffOutlined /> Automatización</span>} key="automation">
             <div className="space-y-8">
 
-              <Alert
-                type="info"
-                className="bg-blue-500/10 border-blue-500/20 text-blue-100"
-                showIcon
-                message="Apagado automático de nodos Swarm"
-                description="Cuando hay un corte eléctrico, el sistema apagará los nodos en el orden configurado antes de que se agote la batería del UPS."
-              />
-
-              {/* Master toggle + thresholds */}
+              {/* Master toggle */}
               <Form form={autoForm} layout="vertical" onFinish={saveAutomation}>
                 <div className="flex items-center gap-3 mb-6">
                   <Form.Item name="automation_enabled" valuePropName="checked" noStyle>
@@ -420,41 +458,79 @@ export function SettingsPage() {
                   </Form.Item>
                   <span className="text-white font-semibold">Automatización habilitada</span>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Form.Item
-                    name="node3_delay_minutes"
-                    label={<span className="text-gray-300">⏱️ Minutos antes de apagar Nodo 3 <Tooltip title="Tiempo de espera tras el corte antes de apagar el nodo de mayor orden"><QuestionCircleOutlined /></Tooltip></span>}
-                  >
-                    <InputNumber min={1} max={30} style={{ width: '100%' }} addonAfter="min" />
-                  </Form.Item>
-                  <Form.Item
-                    name="node2_battery_pct"
-                    label={<span className="text-gray-300">🔋 % para apagar Nodo 2</span>}
-                  >
-                    <InputNumber min={10} max={90} style={{ width: '100%' }} addonAfter="%" />
-                  </Form.Item>
-                  <Form.Item
-                    name="node1_battery_pct"
-                    label={<span className="text-gray-300">🔋 % para apagar Nodo 1 (+ UPS)</span>}
-                  >
-                    <InputNumber min={5} max={40} style={{ width: '100%' }} addonAfter="%" />
-                  </Form.Item>
-                </div>
-
-                <Form.Item
-                  name="ups_powerout_node_id"
-                  label={<span className="text-gray-300">🔌 Nodo desde donde se apaga el UPS <Tooltip title="El nodo que ejecutará el comando apccontrol/ups_cmd antes de apagarse"><QuestionCircleOutlined /></Tooltip></span>}
-                >
-                  <Select placeholder="Usar Nodo 1 por defecto" allowClear style={{ maxWidth: 300 }}>
-                    {nodes.map(n => <Select.Option key={n.id} value={String(n.id)}>{n.name} ({n.host})</Select.Option>)}
-                  </Select>
-                </Form.Item>
-
                 <Button type="primary" htmlType="submit" loading={saving} icon={<CheckCircleOutlined />}>
-                  Guardar configuración de automatización
+                  Guardar
                 </Button>
               </Form>
+
+              <Divider />
+
+              {/* Automations table */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white font-semibold text-lg">Automatizaciones</h3>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => openAutomationModal()}>
+                    Añadir automatización
+                  </Button>
+                </div>
+                <Table
+                  dataSource={automations}
+                  columns={[
+                    {
+                      title: 'Estado',
+                      dataIndex: 'enabled',
+                      render: (v: number) => v ? <Tag color="green">Activa</Tag> : <Tag>Deshabilitada</Tag>,
+                      width: 100,
+                    },
+                    {
+                      title: 'Trigger',
+                      render: (_: unknown, record: Automation) => {
+                        const triggers = {
+                          time_since_outage: 'Tiempo desde corte',
+                          battery_percentage: '% batería restante',
+                          battery_time_remaining: 'Minutos batería restantes',
+                        };
+                        return `${triggers[record.trigger_type]}: ${record.trigger_value}`;
+                      },
+                    },
+                    {
+                      title: 'Comando',
+                      dataIndex: 'command',
+                      ellipsis: true,
+                    },
+                    {
+                      title: 'Nodo',
+                      render: (_: unknown, record: Automation) => {
+                        if (!record.node_id) return 'Sistema';
+                        const node = nodes.find(n => n.id === record.node_id);
+                        return node ? node.name : `ID ${record.node_id}`;
+                      },
+                    },
+                    {
+                      title: 'Notificación',
+                      dataIndex: 'notify',
+                      render: (v: number) => v ? <CheckCircleOutlined style={{ color: 'green' }} /> : null,
+                      width: 100,
+                    },
+                    {
+                      title: 'Acciones',
+                      render: (_: unknown, record: Automation) => (
+                        <Space>
+                          <Button size="small" onClick={() => openAutomationModal(record)}>Editar</Button>
+                          <Button
+                            size="small" danger icon={<DeleteOutlined />}
+                            onClick={() => Modal.confirm({ title: '¿Eliminar automatización?', onOk: () => handleAutomationDelete(record.id!) })}
+                          />
+                        </Space>
+                      ),
+                    },
+                  ]}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                  locale={{ emptyText: 'No hay automatizaciones configuradas. Añade una con el botón de arriba.' }}
+                />
+              </div>
 
               <Divider />
 
@@ -474,16 +550,6 @@ export function SettingsPage() {
                   size="small"
                   locale={{ emptyText: 'No hay nodos configurados. Añade uno con el botón de arriba.' }}
                 />
-              </div>
-
-              {/* Apagado secuencial diagram */}
-              <div className="bg-black/20 rounded-lg p-4 font-mono text-sm text-gray-300">
-                <p className="text-gray-500 mb-2">// Secuencia de apagado</p>
-                <p>Corte eléctrico</p>
-                <p className="pl-4">→ <span className="text-yellow-400">+{autoForm.getFieldValue('node3_delay_minutes') || 5} min</span> → Apagar <span className="text-red-400">Nodo 3</span></p>
-                <p className="pl-4">→ Batería {'<'}<span className="text-yellow-400">{autoForm.getFieldValue('node2_battery_pct') || 60}%</span> → Apagar <span className="text-red-400">Nodo 2</span></p>
-                <p className="pl-4">→ Batería {'<'}<span className="text-yellow-400">{autoForm.getFieldValue('node1_battery_pct') || 20}%</span> → Orden al UPS → Apagar <span className="text-red-400">Nodo 1</span></p>
-                <p className="pl-4 text-green-400">→ Electricidad regresa → UPS enciende → Nodos arrancan via BIOS</p>
               </div>
             </div>
           </TabPane>
@@ -532,6 +598,50 @@ export function SettingsPage() {
           </Form.Item>
           <Form.Item name="ups_cmd" label={<span>Comando para apagar el UPS <Tooltip title="Solo se usa si este nodo es el seleccionado para el apagado del UPS. Vacío = no envía comando de UPS."><QuestionCircleOutlined /></Tooltip></span>}>
             <Input placeholder="sudo apccontrol powerout" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Automation Modal */}
+      <Modal
+        title={editingAutomation ? 'Editar automatización' : 'Nueva automatización'}
+        open={automationModalOpen}
+        onOk={handleAutomationSave}
+        onCancel={() => setAutomationModalOpen(false)}
+        okText="Guardar"
+        cancelText="Cancelar"
+        width={600}
+      >
+        <Form form={automationForm} layout="vertical" className="mt-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item name="enabled" label="Habilitada" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+            <Form.Item name="notify" label="Enviar notificación" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+          </div>
+
+          <Form.Item name="trigger_type" label="Tipo de trigger" rules={[{ required: true }]}>
+            <Select>
+              <Select.Option value="time_since_outage">Minutos desde el último corte de energía</Select.Option>
+              <Select.Option value="battery_percentage">% de batería restante</Select.Option>
+              <Select.Option value="battery_time_remaining">Minutos restantes de batería</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item name="trigger_value" label="Valor del trigger" rules={[{ required: true }]}>
+            <InputNumber min={1} style={{ width: '100%' }} />
+          </Form.Item>
+
+          <Form.Item name="node_id" label="Nodo donde ejecutar (opcional)">
+            <Select placeholder="Ejecutar en el sistema local" allowClear>
+              {nodes.map(n => <Select.Option key={n.id} value={n.id}>{n.name} ({n.host})</Select.Option>)}
+            </Select>
+          </Form.Item>
+
+          <Form.Item name="command" label="Comando a ejecutar" rules={[{ required: true }]}>
+            <TextArea rows={3} placeholder="sudo shutdown -h now" />
           </Form.Item>
         </Form>
       </Modal>
