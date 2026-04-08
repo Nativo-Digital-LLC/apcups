@@ -69,6 +69,17 @@ db.exec(`
     enabled      INTEGER NOT NULL DEFAULT 1
   );
 
+  CREATE TABLE IF NOT EXISTS automations (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    enabled      INTEGER NOT NULL DEFAULT 1,
+    command      TEXT    NOT NULL,
+    trigger_type TEXT    NOT NULL CHECK(trigger_type IN ('time_since_outage', 'battery_time_remaining', 'battery_percentage')),
+    trigger_value INTEGER NOT NULL,
+    node_id      INTEGER,
+    notify       INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (node_id) REFERENCES nodes(id)
+  );
+
   CREATE INDEX IF NOT EXISTS idx_history_timestamp ON history(timestamp);
   CREATE INDEX IF NOT EXISTS idx_events_timestamp  ON events(timestamp);
 `);
@@ -218,6 +229,18 @@ export interface SwarmNode {
   enabled: number;
 }
 
+export type AutomationTriggerType = 'time_since_outage' | 'battery_time_remaining' | 'battery_percentage';
+
+export interface Automation {
+  id?: number;
+  enabled: number;
+  command: string;
+  trigger_type: AutomationTriggerType;
+  trigger_value: number;
+  node_id?: number | null;
+  notify: number;
+}
+
 export function getNodes(): SwarmNode[] {
   return db.prepare<[], SwarmNode>('SELECT * FROM nodes ORDER BY node_order ASC').all();
 }
@@ -250,6 +273,38 @@ export function upsertNode(node: SwarmNode): SwarmNode {
 
 export function deleteNode(id: number): void {
   db.prepare('DELETE FROM nodes WHERE id = ?').run(id);
+}
+
+// ── Automations ─────────────────────────────────────────────────────────────────
+
+export function getAutomations(): Automation[] {
+  return db.prepare<[], Automation>('SELECT * FROM automations ORDER BY id ASC').all();
+}
+
+export function upsertAutomation(auto: Automation): Automation {
+  const safe = {
+    ...auto,
+    node_id: auto.node_id ?? null,
+  };
+
+  if (safe.id) {
+    db.prepare(`
+      UPDATE automations SET enabled=@enabled, command=@command, trigger_type=@trigger_type,
+        trigger_value=@trigger_value, node_id=@node_id, notify=@notify
+      WHERE id=@id
+    `).run(safe);
+    return safe;
+  } else {
+    const info = db.prepare(`
+      INSERT INTO automations (enabled, command, trigger_type, trigger_value, node_id, notify)
+      VALUES (@enabled, @command, @trigger_type, @trigger_value, @node_id, @notify)
+    `).run(safe);
+    return { ...safe, id: Number(info.lastInsertRowid) };
+  }
+}
+
+export function deleteAutomation(id: number): void {
+  db.prepare('DELETE FROM automations WHERE id = ?').run(id);
 }
 
 // ── Users (Auth) ───────────────────────────────────────────────────────────────
