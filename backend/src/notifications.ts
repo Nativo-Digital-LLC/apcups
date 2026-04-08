@@ -46,6 +46,9 @@ export const ALERT_TYPES = [
   'UPS_POWEROUT',
   'STATUS_CHANGE',
   'POWER_TRANSFER',
+  'AUTOMATION_EXECUTED',
+  'AUTOMATION_FAILED',
+  'AUTOMATION_SKIPPED',
 ] as const;
 
 export type AlertType = typeof ALERT_TYPES[number];
@@ -67,6 +70,9 @@ const ALERT_DEFAULTS: Record<AlertType, { email: boolean; push: boolean; cooldow
   UPS_POWEROUT:          { email: true,  push: true,  cooldown: 1  },
   STATUS_CHANGE:         { email: false, push: false, cooldown: 10 },
   POWER_TRANSFER:        { email: false, push: false, cooldown: 10 },
+  AUTOMATION_EXECUTED:   { email: false, push: true,  cooldown: 1  },
+  AUTOMATION_FAILED:     { email: true,  push: true,  cooldown: 1  },
+  AUTOMATION_SKIPPED:    { email: false, push: false, cooldown: 1  },
 };
 
 // Cooldown tracking (in-memory, keyed by alert type)
